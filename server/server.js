@@ -22,6 +22,7 @@ const torrentManager = new TorrentManager();
 // WebSocket connection handling
 wss.on('connection', (ws) => {
     console.log('Client connected');
+    let currentFileId = null;
 
     ws.on('message', async (message) => {
         try {
@@ -30,10 +31,14 @@ wss.on('connection', (ws) => {
             if (data.type === 'magnetLink') {
                 console.log('Received magnet link:', data.magnetLink);
                 
-                // Process the magnet link
-                const result = await torrentManager.addTorrent(data.magnetLink);
+                // Process the magnet link with status callback
+                const result = await torrentManager.addTorrent(
+                    data.magnetLink,
+                    (status) => ws.send(JSON.stringify(status))
+                );
                 
                 if (result.success) {
+                    currentFileId = result.fileId;
                     ws.send(JSON.stringify({
                         type: 'videoURL',
                         url: `/stream/${result.fileId}`,
@@ -57,6 +62,9 @@ wss.on('connection', (ws) => {
 
     ws.on('close', () => {
         console.log('Client disconnected');
+        if (currentFileId) {
+            torrentManager.cleanup(currentFileId);
+        }
     });
 });
 
@@ -72,12 +80,28 @@ app.get('/stream/:fileId', async (req, res) => {
         res.writeHead(200, {
             'Content-Type': 'video/mp4'
         });
+
+        // Handle client disconnect
+        req.on('close', () => {
+            if (stream.destroy) stream.destroy();
+        });
+
+        // Handle stream errors
+        stream.on('error', (error) => {
+            console.error('Stream error:', error);
+            if (!res.headersSent) {
+                res.status(500).send('Streaming error occurred');
+            }
+            if (stream.destroy) stream.destroy();
+        });
         
         // Pipe the video stream to response
         stream.pipe(res);
     } catch (error) {
         console.error('Streaming error:', error);
-        res.status(500).send('Error streaming video');
+        if (!res.headersSent) {
+            res.status(500).send('Error streaming video');
+        }
     }
 });
 
