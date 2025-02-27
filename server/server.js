@@ -4,6 +4,8 @@ import { WebSocketServer } from 'ws';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import TorrentManager from './torrentManager.js';
+import srt2vtt from 'srt-to-vtt';
+import { PassThrough } from 'stream'; // Native stream passthrough
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -43,15 +45,17 @@ wss.on('connection', (ws) => {
 
                 if (result.success) {
                     currentFileId = result.fileId;
+                
+                    // Get the data from the torrent manager to figure out how many subtitles
+                    const data = torrentManager.torrents.get(result.fileId);
+                    const subtitleCount = data?.subtitleFiles?.length || 0;
+                
                     ws.send(JSON.stringify({
                         type: 'videoURL',
                         url: `/stream/${result.fileId}`,
-                        fileName: result.fileName
-                    }));
-                } else {
-                    ws.send(JSON.stringify({
-                        type: 'error',
-                        message: result.error
+                        fileName: result.fileName,
+                        fileId: result.fileId,            // add the fileId so the client can build subtitle URLs
+                        subtitleCount: subtitleCount      // send how many subtitles we found
                     }));
                 }
             }
@@ -152,6 +156,51 @@ app.get('/stream/:fileId', async (req, res) => {
         if (stream) {
             stream.destroy();
         }
+    }
+});
+
+
+app.get('/subtitles/:fileId/:index', async (req, res) => {
+    try {
+        const fileId = req.params.fileId;
+        const index = parseInt(req.params.index, 10);
+
+        // 1) Look up the torrent data
+        const data = torrentManager.torrents.get(fileId);
+        if (!data) {
+            return res.status(404).send('Torrent data not found');
+        }
+        const subtitleFile = data.subtitleFiles[index];
+        if (!subtitleFile) {
+            return res.status(404).send('Subtitle file not found');
+        }
+
+        // 2) Check if subtitle is .srt or .vtt
+        const isSrt = /\.srt$/i.test(subtitleFile.name);
+        if (isSrt) {
+            // Serve as WebVTT by piping through srt-to-vtt
+            res.setHeader('Content-Type', 'text/vtt');
+
+            const passThrough = new PassThrough();
+            // If you need error handling:
+            passThrough.on('error', (err) => {
+                console.error('Subtitle conversion error:', err);
+            });
+
+            subtitleFile.createReadStream()
+                .pipe(srt2vtt())   // Convert SRT → VTT
+                .pipe(passThrough)
+                .pipe(res);
+
+        } else {
+            // If already .vtt, just stream it directly
+            res.setHeader('Content-Type', 'text/vtt');
+            subtitleFile.createReadStream().pipe(res);
+        }
+
+    } catch (error) {
+        console.error('Subtitle serving error:', error);
+        res.status(500).send('Error serving subtitle');
     }
 });
 
