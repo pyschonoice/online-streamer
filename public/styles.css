@@ -39,6 +39,7 @@
     margin-top: 20px;
 }
 
+/* The video will take full width if possible, up to 800px */
 #videoPlayer {
     width: 100%;
     max-width: 800px;
@@ -64,26 +65,6 @@
 .status-item:last-child {
     border-bottom: none;
 }
-
-/* .buffer-bar {
-    flex-grow: 1;
-    margin-left: 10px;
-    height: 8px;
-    background: #ddd;
-    border-radius: 4px;
-    overflow: hidden;
-    position: relative;
-}
-
-.buffer-progress {
-    position: absolute;
-    left: 0;
-    top: 0;
-    height: 100%;
-    background: #4CAF50;
-    width: 0%;
-    transition: width 0.3s ease;
-} */
 
 .keyboard-controls-hint {
     margin-top: 15px;
@@ -132,4 +113,46 @@
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
-} 
+}
+
+/* Position subtitles near the bottom-right corner (HTML5/WebVTT) */
+video::cue {
+    text-align: right;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    font-size: 1em;
+}
+
+/* For Chrome/Edge/Safari specifically */
+video::-webkit-media-text-track-region {
+    left: auto !important;
+    right: 5% !important;
+    bottom: 5% !important;
+    width: 30% !important;
+    text-align: right !important;
+}
+
+/* Hide the subtitle controls by default */
+.subtitle-controls {
+    display: none;
+    margin-top: 10px; /* optional styling */
+    gap: 10px;        /* optional styling if you use flex */
+  }
+  
+
+/* Keep the video + subtitles in one block, only visible when #videoPlayer is displayed */
+.video-container {
+    position: relative;
+    display: inline-block;
+}
+
+/* Toggle button colors for subtitles */
+#toggleSubtitlesBtn.subtitles-on {
+    background-color: green;
+    color: #fff;
+}
+
+#toggleSubtitlesBtn.subtitles-off {
+    background-color: red;
+    color: #fff;
+}

@@ -28,13 +28,19 @@ class TorrentManager {
           torrent.destroy();
           return resolve({ success: false, error: 'No video file found in torrent' });
         }
+        
+          // 2) Find all subtitle files
+        const subtitleFiles = torrent.files.filter(file => {
+            return /\.(srt|vtt)$/i.test(file.name);
+        });
 
         // Create a base64 fileId
         const fileId = Buffer.from(videoFile.name).toString('base64');
 
         // IMPORTANT: Store both the torrent object and the videoFile
-        this.torrents.set(fileId, { torrent, videoFile });
-
+        //this.torrents.set(fileId, { torrent, videoFile });
+        
+        this.torrents.set(fileId, { torrent, videoFile, subtitleFiles });
         // Start periodic status updates
         this.setupStatusUpdates(torrent, fileId, statusCallback);
 

@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>WebTorrent Video Streaming</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -23,29 +23,21 @@
         </div>
 
         <div id="torrentStatus" class="status-container" style="display: none;">
-            <!-- <div class="status-item">
-                <span>Download:</span>
-                <span id="downloadSpeed">0 KB/s</span>
-            </div>
-            <div class="status-item">
-                <span>Upload:</span>
-                <span id="uploadSpeed">0 KB/s</span>
-            </div> -->
             <div class="status-item">
                 <span>Peers:</span>
                 <span id="peers">0</span>
             </div>
-            <!-- <div class="status-item">
-                <span>Progress:</span>
-                <span id="progress">0%</span>
-            </div> -->
-            <!-- <div class="status-item">
-                <span>Buffer Health:</span>
-                <div class="buffer-bar">
-                    <div id="bufferProgress" class="buffer-progress"></div>
-                </div>
-                <span id="bufferPercentage">0%</span>
-            </div> -->
+        </div>
+
+        <!-- Subtitle track selection + toggle button -->
+        <div class="subtitle-controls">
+            <label for="subTrackSelect">Subtitle Track:</label>
+            <select id="subTrackSelect"></select>
+            
+            <!-- Start off in OFF (red) state -->
+            <button id="toggleSubtitlesBtn" class="subtitles-off">
+                Toggle Subtitles (OFF)
+            </button>
         </div>
 
         <div class="video-container">
@@ -65,17 +57,18 @@
             </ul>
         </div>
     </div>
-    <script src="client.js"></script>
-</body>
 
-<script>
-    window.addEventListener('beforeunload', () => {
-      // If you're maintaining a WebSocket reference in window.torrentWs or similar:
-      if (window.torrentWs && window.torrentWs.readyState === WebSocket.OPEN) {
-        console.log('Notifying server to cleanup before closing...');
-        // Send a message or close the websocket explicitly
-        window.torrentWs.close();
-      }
-    });
-  </script>
-</html> 
+    <script src="client.js"></script>
+
+    <script>
+        window.addEventListener('beforeunload', () => {
+          // If you're maintaining a WebSocket reference in window.torrentWs or similar:
+          if (window.torrentWs && window.torrentWs.readyState === WebSocket.OPEN) {
+            console.log('Notifying server to cleanup before closing...');
+            // Send a message or close the websocket explicitly
+            window.torrentWs.close();
+          }
+        });
+    </script>
+</body>
+</html>
