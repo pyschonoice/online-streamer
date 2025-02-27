@@ -65,7 +65,7 @@
     border-bottom: none;
 }
 
-.buffer-bar {
+/* .buffer-bar {
     flex-grow: 1;
     margin-left: 10px;
     height: 8px;
@@ -83,7 +83,7 @@
     background: #4CAF50;
     width: 0%;
     transition: width 0.3s ease;
-}
+} */
 
 .keyboard-controls-hint {
     margin-top: 15px;

@@ -105,30 +105,32 @@ class TorrentStreamClient {
         const statusElement = document.getElementById('torrentStatus');
         statusElement.style.display = 'block';
 
-        document.getElementById('downloadSpeed').textContent = 
-            this.formatSpeed(data.downloadSpeed);
-        document.getElementById('uploadSpeed').textContent = 
-            this.formatSpeed(data.uploadSpeed);
+        // document.getElementById('downloadSpeed').textContent = 
+        //     this.formatSpeed(data.downloadSpeed);
+        // document.getElementById('uploadSpeed').textContent = 
+        //     this.formatSpeed(data.uploadSpeed);
         document.getElementById('peers').textContent = data.peers;
-        document.getElementById('progress').textContent = 
-            `${(data.progress * 100).toFixed(1)}%`;
+        // document.getElementById('progress').textContent = 
+        //     `${(data.progress * 100).toFixed(1)}%`;
 
-        if (data.buffer) {
-            const bufferProgress = document.getElementById('bufferProgress');
-            const bufferHealth = Math.min(
-                100,
-                ((data.buffer.pieces * 0.7 + data.buffer.progress * 0.3) * 100)
-            );
-            bufferProgress.style.width = `${bufferHealth}%`;
-            
-            if (bufferHealth > 80) {
-                bufferProgress.style.backgroundColor = '#4CAF50';
-            } else if (bufferHealth > 30) {
-                bufferProgress.style.backgroundColor = '#FFA726';
-            } else {
-                bufferProgress.style.backgroundColor = '#F44336';
-            }
-        }
+        // if (data.buffer) {
+        //     const bufferProgress = document.getElementById('bufferProgress');
+        //     const bufferPercentage = document.getElementById('bufferPercentage');
+    
+        //     // Calculate buffer percentage correctly
+        //     const bufferValue = Math.min(100, data.buffer * 100);
+        //     bufferProgress.style.width = `${bufferValue}%`;
+        //     bufferPercentage.textContent = `${bufferValue.toFixed(1)}%`;
+    
+        //     // Change buffer bar color based on buffer value
+        //     if (bufferValue > 80) {
+        //         bufferProgress.style.backgroundColor = '#4CAF50'; // Green (good buffer)
+        //     } else if (bufferValue > 30) {
+        //         bufferProgress.style.backgroundColor = '#FFA726'; // Orange (medium buffer)
+        //     } else {
+        //         bufferProgress.style.backgroundColor = '#F44336'; // Red (low buffer)
+        //     }
+        // }
     }
 
     formatSpeed(bytes) {
@@ -252,3 +254,10 @@ window.addEventListener('beforeunload', () => {
         window.torrentClient.cleanup();
     }
 }); 
+
+window.addEventListener('beforeunload', () => {
+    if (window.torrentClient) {
+        console.log('Cleaning up WebTorrent before closing...');
+        window.torrentClient.ws.send(JSON.stringify({ type: 'disconnect' }));
+    }
+});

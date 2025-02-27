@@ -1,96 +1,138 @@
 import WebTorrent from 'webtorrent';
+import path from 'path';
+import os from 'os';
+import { promises as fsp } from 'fs';
+
+const { readdir, lstat, unlink, rmdir } = fsp;
 
 class TorrentManager {
-    constructor() {
-        this.client = new WebTorrent();
-        this.torrents = new Map(); // Store active torrents
-        this.statusIntervals = new Map(); // Store status update intervals
-    }
+  constructor() {
+    this.client = new WebTorrent();
+    this.torrents = new Map();       // Will now store { torrent, videoFile }
+    this.statusIntervals = new Map();
+  }
 
-    async addTorrent(magnetLink, statusCallback) {
-        return new Promise((resolve, reject) => {
-            this.client.add(magnetLink, (torrent) => {
-                // Find the largest video file
-                const videoFile = torrent.files.reduce((largest, file) => {
-                    const isVideo = /\.(mp4|webm|mkv)$/i.test(file.name);
-                    return isVideo && (!largest || file.length > largest.length) ? file : largest;
-                }, null);
+  async addTorrent(magnetLink, statusCallback) {
+    return new Promise((resolve) => {
+      // If you only want one torrent at a time, you can still destroy the old ones here:
+      // this.client.torrents.forEach(t => t.destroy());
 
-                if (!videoFile) {
-                    torrent.destroy();
-                    resolve({
-                        success: false,
-                        error: 'No video file found in torrent'
-                    });
-                    return;
-                }
+      this.client.add(magnetLink, (torrent) => {
+        // Pick the largest video file
+        const videoFile = torrent.files.reduce((largest, file) => {
+          const isVideo = /\.(mp4|webm|mkv)$/i.test(file.name);
+          return isVideo && (!largest || file.length > largest.length) ? file : largest;
+        }, null);
 
-                const fileId = Buffer.from(videoFile.name).toString('base64');
-                this.torrents.set(fileId, videoFile);
-
-                // Setup status updates
-                this.setupStatusUpdates(torrent, fileId, statusCallback);
-
-                resolve({
-                    success: true,
-                    fileId,
-                    fileName: videoFile.name
-                });
-            });
-        });
-    }
-
-    setupStatusUpdates(torrent, fileId, statusCallback) {
-        const interval = setInterval(() => {
-            const status = {
-                type: 'status',
-                downloadSpeed: torrent.downloadSpeed,
-                uploadSpeed: torrent.uploadSpeed,
-                progress: torrent.progress,
-                peers: torrent.numPeers,
-                buffer: torrent.pieces.length > 0 ? 
-                    torrent.pieces.filter(piece => piece).length / torrent.pieces.length : 0
-            };
-            statusCallback(status);
-        }, 1000);
-
-        this.statusIntervals.set(fileId, interval);
-    }
-
-    getVideoFile(fileId) {
-        return this.torrents.get(fileId);
-    }
-
-    async getVideoStream(fileId, options = {}) {
-        const videoFile = this.torrents.get(fileId);
         if (!videoFile) {
-            return null;
+          torrent.destroy();
+          return resolve({ success: false, error: 'No video file found in torrent' });
         }
-        const stream = videoFile.createReadStream(options);
-        
-        // Add error handler to the stream
-        stream.on('error', (error) => {
-            console.error('Stream error in TorrentManager:', error);
-            stream.destroy();
+
+        // Create a base64 fileId
+        const fileId = Buffer.from(videoFile.name).toString('base64');
+
+        // IMPORTANT: Store both the torrent object and the videoFile
+        this.torrents.set(fileId, { torrent, videoFile });
+
+        // Start periodic status updates
+        this.setupStatusUpdates(torrent, fileId, statusCallback);
+
+        resolve({
+          success: true,
+          fileId,
+          fileName: videoFile.name
         });
+      });
+    });
+  }
 
-        return stream;
+  setupStatusUpdates(torrent, fileId, statusCallback) {
+    const interval = setInterval(() => {
+      const status = {
+        type: 'status',
+        progress: torrent.progress,
+        peers: torrent.numPeers,
+      };
+      statusCallback(status);
+    }, 1000);
+
+    this.statusIntervals.set(fileId, interval);
+  }
+
+  getVideoFile(fileId) {
+    const data = this.torrents.get(fileId);
+    return data ? data.videoFile : null;
+  }
+
+  async getVideoStream(fileId, options = {}) {
+    const data = this.torrents.get(fileId);
+    if (!data) return null;
+
+    const { videoFile } = data;
+    const stream = videoFile.createReadStream(options);
+
+    // Add error handler
+    stream.on('error', (error) => {
+      console.error('Stream error in TorrentManager:', error);
+      stream.destroy();
+    });
+    return stream;
+  }
+
+  async cleanup(fileId) {
+    console.log(`Cleaning up torrent for fileId: ${fileId}`);
+    
+    // 1) Destroy the torrent to release file locks
+    const data = this.torrents.get(fileId);
+    if (data && data.torrent) {
+      console.log(`Destroying torrent instance for fileId: ${fileId}`);
+      await new Promise((resolve) => data.torrent.destroy(resolve));
+      this.torrents.delete(fileId);
     }
 
-    cleanup(fileId) {
-        const interval = this.statusIntervals.get(fileId);
-        if (interval) {
-            clearInterval(interval);
-            this.statusIntervals.delete(fileId);
-        }
-
-        // Cleanup the torrent
-        const videoFile = this.torrents.get(fileId);
-        if (videoFile && videoFile.torrent) {
-            videoFile.torrent.destroy();
-            this.torrents.delete(fileId);
-        }
+    // 2) Clear any status update intervals
+    const interval = this.statusIntervals.get(fileId);
+    if (interval) {
+      clearInterval(interval);
+      this.statusIntervals.delete(fileId);
     }
+
+    // 3) (Optional) small delay to let OS close handles fully
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // 4) Recursively delete the entire /webtorrent directory
+    const tempDir = path.join(os.tmpdir(), 'webtorrent');
+    try {
+      await deleteFolderRecursive(tempDir);
+      console.log(`Successfully removed: ${tempDir}`);
+    } catch (err) {
+      console.error('Error removing webtorrent directory:', err);
+    }
+  }
 }
 
-export default TorrentManager; 
+// Recursively deletes a folder and all its subfolders/files
+async function deleteFolderRecursive(dirPath) {
+  try {
+    const items = await readdir(dirPath);
+    for (const item of items) {
+      const fullPath = path.join(dirPath, item);
+      const stats = await lstat(fullPath);
+
+      if (stats.isDirectory()) {
+        await deleteFolderRecursive(fullPath);
+        await rmdir(fullPath);
+      } else {
+        await unlink(fullPath);
+      }
+    }
+    await rmdir(dirPath);
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      throw err;
+    }
+  }
+}
+
+export default TorrentManager;

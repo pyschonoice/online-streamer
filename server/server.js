@@ -27,16 +27,20 @@ wss.on('connection', (ws) => {
     ws.on('message', async (message) => {
         try {
             const data = JSON.parse(message);
-            
+
             if (data.type === 'magnetLink') {
                 console.log('Received magnet link:', data.magnetLink);
                 
-                // Process the magnet link
+                // Ensure previous torrent is cleaned up before adding a new one
+                if (currentFileId) {
+                    await torrentManager.cleanup(currentFileId);
+                }
+
                 const result = await torrentManager.addTorrent(
                     data.magnetLink,
                     (status) => ws.send(JSON.stringify(status))
                 );
-                
+
                 if (result.success) {
                     currentFileId = result.fileId;
                     ws.send(JSON.stringify({
@@ -53,20 +57,19 @@ wss.on('connection', (ws) => {
             }
         } catch (error) {
             console.error('Error processing message:', error);
-            ws.send(JSON.stringify({
-                type: 'error',
-                message: 'Internal server error'
-            }));
+            ws.send(JSON.stringify({ type: 'error', message: 'Internal server error' }));
         }
     });
 
-    ws.on('close', () => {
+    ws.on('close', async () => {
         console.log('Client disconnected');
         if (currentFileId) {
-            torrentManager.cleanup(currentFileId);
+            await torrentManager.cleanup(currentFileId);
         }
     });
 });
+
+
 
 // Video streaming endpoint
 app.get('/stream/:fileId', async (req, res) => {
@@ -156,3 +159,4 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 }); 
+
