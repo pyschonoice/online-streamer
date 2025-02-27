@@ -4,14 +4,12 @@ class TorrentStreamClient {
         this.setupWebSocket();
         this.setupEventListeners();
         this.setupKeyboardControls();
-        this.seekStep = 10;
-        this.isConnected = false;
+        this.seekAmount = 10; // seconds to seek
     }
 
     setupWebSocket() {
         this.ws.onopen = () => {
             console.log('Connected to server');
-            this.isConnected = true;
         };
 
         this.ws.onmessage = (event) => {
@@ -31,9 +29,7 @@ class TorrentStreamClient {
         };
 
         this.ws.onclose = () => {
-            console.log('Connection to server lost');
-            this.isConnected = false;
-            this.showError('Connection to server lost. Please refresh the page.');
+            this.showError('Connection to server lost');
         };
     }
 
@@ -51,36 +47,38 @@ class TorrentStreamClient {
         }
 
         this.clearError();
-        this.showLoading(true);
         this.ws.send(JSON.stringify({
             type: 'magnetLink',
             magnetLink: magnetLink
         }));
     }
 
-    showLoading(show) {
-        const loadingElement = document.getElementById('loadingStatus');
-        const statusElement = document.getElementById('torrentStatus');
-        loadingElement.style.display = show ? 'block' : 'none';
-        if (show) {
-            statusElement.style.display = 'none';
-        }
-    }
-
     handleVideoURL(data) {
-        this.showLoading(false);
         const videoPlayer = document.getElementById('videoPlayer');
         
-        // Setup video error handling
-        videoPlayer.onerror = (e) => {
+        // Remove any existing error listeners
+        videoPlayer.removeEventListener('error', this.handleVideoError);
+        
+        // Add error handler
+        this.handleVideoError = (e) => {
             console.error('Video error:', e);
-            this.showError('Error playing video. Please try again.');
-            videoPlayer.style.display = 'none';
+            this.showError('Error playing video. Retrying...');
+            
+            // Optional: Implement retry logic
+            setTimeout(() => {
+                videoPlayer.load();
+                videoPlayer.play().catch(err => {
+                    console.error('Retry failed:', err);
+                });
+            }, 2000);
         };
-
+        
+        videoPlayer.addEventListener('error', this.handleVideoError);
+        
         videoPlayer.src = data.url;
         videoPlayer.style.display = 'block';
         
+        // Add event listeners for video loading
         videoPlayer.addEventListener('loadedmetadata', () => {
             console.log('Video metadata loaded');
         });
@@ -91,7 +89,6 @@ class TorrentStreamClient {
     }
 
     showError(message) {
-        this.showLoading(false);
         const errorElement = document.getElementById('error');
         errorElement.textContent = message;
     }
@@ -105,30 +102,22 @@ class TorrentStreamClient {
         const statusElement = document.getElementById('torrentStatus');
         statusElement.style.display = 'block';
 
+        // Update speed displays
         document.getElementById('downloadSpeed').textContent = 
             this.formatSpeed(data.downloadSpeed);
         document.getElementById('uploadSpeed').textContent = 
             this.formatSpeed(data.uploadSpeed);
+        
+        // Update peers
         document.getElementById('peers').textContent = data.peers;
+        
+        // Update progress
         document.getElementById('progress').textContent = 
             `${(data.progress * 100).toFixed(1)}%`;
-
-        if (data.buffer) {
-            const bufferProgress = document.getElementById('bufferProgress');
-            const bufferHealth = Math.min(
-                100,
-                ((data.buffer.pieces * 0.7 + data.buffer.progress * 0.3) * 100)
-            );
-            bufferProgress.style.width = `${bufferHealth}%`;
-            
-            if (bufferHealth > 80) {
-                bufferProgress.style.backgroundColor = '#4CAF50';
-            } else if (bufferHealth > 30) {
-                bufferProgress.style.backgroundColor = '#FFA726';
-            } else {
-                bufferProgress.style.backgroundColor = '#F44336';
-            }
-        }
+        
+        // Update buffer progress
+        document.getElementById('bufferProgress').style.width = 
+            `${(data.buffer * 100).toFixed(1)}%`;
     }
 
     formatSpeed(bytes) {
@@ -147,60 +136,52 @@ class TorrentStreamClient {
     setupKeyboardControls() {
         document.addEventListener('keydown', (e) => {
             const video = document.getElementById('videoPlayer');
-            if (!video || !video.src || !this.isConnected) return;
+            if (!video) return;
 
             switch(e.code) {
                 case 'Space':
                     e.preventDefault();
                     if (video.paused) {
-                        video.play().catch(err => {
-                            console.error('Play failed:', err);
-                            this.handleVideoError();
-                        });
+                        video.play().catch(err => console.error('Play failed:', err));
                     } else {
                         video.pause();
                     }
                     break;
-
+                    
                 case 'ArrowLeft':
                     e.preventDefault();
-                    this.seekVideo(video, -this.seekStep);
+                    this.seekVideo(video, -this.seekAmount);
                     break;
-
+                    
                 case 'ArrowRight':
                     e.preventDefault();
-                    this.seekVideo(video, this.seekStep);
+                    this.seekVideo(video, this.seekAmount);
                     break;
-
+                    
                 case 'ArrowUp':
                     e.preventDefault();
                     video.volume = Math.min(1, video.volume + 0.1);
                     break;
-
+                    
                 case 'ArrowDown':
                     e.preventDefault();
                     video.volume = Math.max(0, video.volume - 0.1);
                     break;
-
+                    
                 case 'KeyF':
                     e.preventDefault();
                     this.toggleFullscreen(video);
-                    break;
-
-                case 'KeyM':
-                    e.preventDefault();
-                    video.muted = !video.muted;
                     break;
             }
         });
     }
 
-    handleVideoError() {
-        const video = document.getElementById('videoPlayer');
-        if (video) {
-            video.style.display = 'none';
+    seekVideo(video, amount) {
+        if (video.readyState > 0) {
+            const newTime = video.currentTime + amount;
+            video.currentTime = Math.max(0, Math.min(newTime, video.duration));
+            console.log(`Seeking to: ${video.currentTime}`);
         }
-        this.showError('Video playback error. Please try refreshing the page.');
     }
 
     toggleFullscreen(video) {
@@ -214,6 +195,7 @@ class TorrentStreamClient {
             }
         } catch (err) {
             console.error('Fullscreen error:', err);
+            // Fallback for older browsers
             if (video.webkitRequestFullscreen) {
                 video.webkitRequestFullscreen();
             } else if (video.mozRequestFullScreen) {
@@ -221,34 +203,9 @@ class TorrentStreamClient {
             }
         }
     }
-
-    isVideoPlayable() {
-        return this.isConnected && document.getElementById('videoPlayer').readyState > 0;
-    }
-
-    seekVideo(video, seconds) {
-        if (this.isVideoPlayable()) {
-            const newTime = video.currentTime + seconds;
-            video.currentTime = Math.max(0, Math.min(newTime, video.duration));
-        }
-    }
-
-    cleanup() {
-        const video = document.getElementById('videoPlayer');
-        if (video) {
-            video.pause();
-            video.src = '';
-            video.load();
-        }
-    }
 }
 
+// Initialize the client when the page loads
 window.addEventListener('load', () => {
     new TorrentStreamClient();
-});
-
-window.addEventListener('beforeunload', () => {
-    if (window.torrentClient) {
-        window.torrentClient.cleanup();
-    }
 }); 

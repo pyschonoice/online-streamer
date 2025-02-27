@@ -31,7 +31,7 @@ wss.on('connection', (ws) => {
             if (data.type === 'magnetLink') {
                 console.log('Received magnet link:', data.magnetLink);
                 
-                // Process the magnet link with status callback
+                // Process the magnet link
                 const result = await torrentManager.addTorrent(
                     data.magnetLink,
                     (status) => ws.send(JSON.stringify(status))
@@ -70,37 +70,84 @@ wss.on('connection', (ws) => {
 
 // Video streaming endpoint
 app.get('/stream/:fileId', async (req, res) => {
+    let stream = null;
+    let rangeStream = null;
+
     try {
-        const stream = await torrentManager.getVideoStream(req.params.fileId);
+        stream = await torrentManager.getVideoStream(req.params.fileId);
         if (!stream) {
             return res.status(404).send('Video not found');
         }
         
-        // Set appropriate headers
-        res.writeHead(200, {
-            'Content-Type': 'video/mp4'
-        });
+        // Get the video file size
+        const videoFile = torrentManager.getVideoFile(req.params.fileId);
+        const fileSize = videoFile.length;
+        
+        // Parse Range header
+        const range = req.headers.range;
+        if (range) {
+            const parts = range.replace(/bytes=/, "").split("-");
+            const start = parseInt(parts[0], 10);
+            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+            const chunksize = (end - start) + 1;
+            
+            res.writeHead(206, {
+                'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+                'Accept-Ranges': 'bytes',
+                'Content-Length': chunksize,
+                'Content-Type': 'video/mp4'
+            });
+            
+            // Create stream for specific range
+            rangeStream = videoFile.createReadStream({ start, end });
+            
+            // Handle stream errors
+            rangeStream.on('error', (error) => {
+                console.error('Range stream error:', error);
+                if (!res.headersSent) {
+                    res.status(500).send('Streaming error occurred');
+                }
+            });
+
+            rangeStream.pipe(res);
+        } else {
+            res.writeHead(200, {
+                'Content-Length': fileSize,
+                'Content-Type': 'video/mp4'
+            });
+
+            // Handle stream errors
+            stream.on('error', (error) => {
+                console.error('Stream error:', error);
+                if (!res.headersSent) {
+                    res.status(500).send('Streaming error occurred');
+                }
+            });
+
+            stream.pipe(res);
+        }
 
         // Handle client disconnect
         req.on('close', () => {
-            if (stream.destroy) stream.destroy();
+            console.log('Client disconnected from stream');
+            if (rangeStream) {
+                rangeStream.destroy();
+            }
+            if (stream) {
+                stream.destroy();
+            }
         });
 
-        // Handle stream errors
-        stream.on('error', (error) => {
-            console.error('Stream error:', error);
-            if (!res.headersSent) {
-                res.status(500).send('Streaming error occurred');
-            }
-            if (stream.destroy) stream.destroy();
-        });
-        
-        // Pipe the video stream to response
-        stream.pipe(res);
     } catch (error) {
         console.error('Streaming error:', error);
         if (!res.headersSent) {
             res.status(500).send('Error streaming video');
+        }
+        if (rangeStream) {
+            rangeStream.destroy();
+        }
+        if (stream) {
+            stream.destroy();
         }
     }
 });
