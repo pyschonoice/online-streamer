@@ -17,17 +17,22 @@
 
         <div id="error" class="error"></div>
 
+        <div id="loadingStatus" class="loading-container" style="display: none;">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Loading torrent metadata...</div>
+        </div>
+
         <div id="torrentStatus" class="status-container" style="display: none;">
             <div class="status-item">
-                <span>Download Speed:</span>
+                <span>Download:</span>
                 <span id="downloadSpeed">0 KB/s</span>
             </div>
             <div class="status-item">
-                <span>Upload Speed:</span>
+                <span>Upload:</span>
                 <span id="uploadSpeed">0 KB/s</span>
             </div>
             <div class="status-item">
-                <span>Connected Peers:</span>
+                <span>Peers:</span>
                 <span id="peers">0</span>
             </div>
             <div class="status-item">
@@ -35,7 +40,7 @@
                 <span id="progress">0%</span>
             </div>
             <div class="status-item">
-                <span>Buffer:</span>
+                <span>Buffer Health:</span>
                 <div class="buffer-bar">
                     <div id="bufferProgress" class="buffer-progress"></div>
                 </div>
@@ -46,6 +51,17 @@
             <video id="videoPlayer" controls style="display: none;">
                 Your browser does not support the video tag.
             </video>
+        </div>
+
+        <div class="keyboard-controls-hint">
+            Keyboard Controls:
+            <ul>
+                <li>←/→: Seek ±10 seconds</li>
+                <li>↑/↓: Volume control</li>
+                <li>Space: Play/Pause</li>
+                <li>F: Fullscreen</li>
+                <li>M: Mute/Unmute</li>
+            </ul>
         </div>
     </div>
     <script src="client.js"></script>
