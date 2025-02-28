@@ -148,49 +148,26 @@ class TorrentManager {
       await new Promise((resolve) => data.torrent.destroy(resolve));
       this.torrents.delete(fileId);
     }
-
+  
     // 2) Clear any status update intervals
     const interval = this.statusIntervals.get(fileId);
     if (interval) {
       clearInterval(interval);
       this.statusIntervals.delete(fileId);
     }
-
+  
     // 3) (Optional) small delay to let OS close handles fully
     await new Promise(resolve => setTimeout(resolve, 500));
-
-    // 4) Recursively delete the entire /webtorrent directory
+  
+    // 4) Delete the entire /webtorrent directory in one operation
     const tempDir = path.join(os.tmpdir(), 'webtorrent');
     try {
-      await deleteFolderRecursive(tempDir);
+      await fsp.rm(tempDir, { recursive: true, force: true });
       console.log(`Successfully removed: ${tempDir}`);
     } catch (err) {
       console.error('Error removing webtorrent directory:', err);
     }
   }
-}
-
-// Recursively deletes a folder and all its subfolders/files
-async function deleteFolderRecursive(dirPath) {
-  try {
-    const items = await readdir(dirPath);
-    for (const item of items) {
-      const fullPath = path.join(dirPath, item);
-      const stats = await lstat(fullPath);
-
-      if (stats.isDirectory()) {
-        await deleteFolderRecursive(fullPath);
-        await rmdir(fullPath);
-      } else {
-        await unlink(fullPath);
-      }
-    }
-    await rmdir(dirPath);
-  } catch (err) {
-    if (err.code !== 'ENOENT') {
-      throw err;
-    }
-  }
-}
+}  
 
 export default TorrentManager;
