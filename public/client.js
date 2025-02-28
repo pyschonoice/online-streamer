@@ -88,7 +88,7 @@ class TorrentStreamClient {
             this.showStats = !this.showStats;
             const statsPanel = document.getElementById('torrentStatus');
             statsPanel.style.display = this.showStats ? 'block' : 'none';
-            statsBtn.textContent = this.showStats ? 'Hide Stats' : 'Status';
+            statsBtn.textContent = this.showStats ? 'Hide Stats' : 'Stats';
         });
 
   
@@ -187,7 +187,7 @@ class TorrentStreamClient {
 
     handleVideoURL(data) {
         this.showLoading(false);
-        
+
         const videoContainer = document.getElementById('videoContainer');
         videoContainer.style.display = 'block';
         const videoPlayer = document.getElementById('videoPlayer');
