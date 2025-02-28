@@ -32,12 +32,7 @@
             <div class="loading-text">Loading torrent metadata...</div>
         </div>
 
-        <div id="torrentStatus" class="status-container" style="display: none;">
-            <div class="status-item">
-                <span>Peers:</span>
-                <span id="peers">0</span>
-            </div>
-        </div>
+        
 
         <!-- Subtitle track selection + toggle button -->
         <div class="subtitle-controls">
@@ -56,7 +51,38 @@
             </video>
         </div>
 
-        <div class="keyboard-controls-hint">
+        <!-- New toggle button for status updates -->
+        <button id="toggleStatusBtn">Status</button>
+
+        <!-- Updated status container with additional info -->
+        <div id="torrentStatus" class="status-container" style="display: none;">
+            <div class="status-item">
+            <span>Download Speed:</span>
+            <span id="downloadSpeed">0 B/s</span>
+            </div>
+            <div class="status-item">
+            <span>Upload Speed:</span>
+            <span id="uploadSpeed">0 B/s</span>
+            </div>
+            <div class="status-item">
+            <span>Progress:</span>
+            <span id="progress">0%</span>
+            </div>
+            <div class="status-item">
+            <span>Buffer Health:</span>
+            <span id="bufferHealth">N/A</span>
+            </div>
+            <div class="status-item">
+            <span>Peers:</span>
+            <span id="peers">0</span>
+            </div>
+            <!-- <div class="status-item">
+            <span>Leechers:</span>
+            <span id="leechers">0</span>
+            </div> -->
+        </div>
+
+        <!-- <div class="keyboard-controls-hint">
             Keyboard Controls:
             <ul>
                 <li>←/→: Seek ±10 seconds</li>
@@ -65,7 +91,7 @@
                 <li>F: Fullscreen</li>
                 <li>M: Mute/Unmute</li>
             </ul>
-        </div>
+        </div> -->
     </div>
 
     <script src="client.js"></script>

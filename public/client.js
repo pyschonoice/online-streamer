@@ -108,6 +108,17 @@ class TorrentStreamClient {
                 this.handleTorrentFile(file);
             }
         });
+
+        const toggleStatusBtn = document.getElementById('toggleStatusBtn');
+        toggleStatusBtn.addEventListener('click', () => {
+        const statusContainer = document.getElementById('torrentStatus');
+        // Toggle display between block and none
+        if (statusContainer.style.display === 'none' || statusContainer.style.display === '') {
+            statusContainer.style.display = 'block';
+        } else {
+            statusContainer.style.display = 'none';
+        }
+        });
     }
 
      // ====== NEW: read .torrent file as base64 and send to server ======
@@ -266,24 +277,50 @@ class TorrentStreamClient {
     }
 
     updateStatus(data) {
-        const statusElement = document.getElementById('torrentStatus');
-        statusElement.style.display = 'block';
-        document.getElementById('peers').textContent = data.peers;
-    }
+        // Download/Upload speeds in bytes/sec
+        document.getElementById('downloadSpeed').textContent = this.formatSpeed(data.downloadSpeed);
+        document.getElementById('uploadSpeed').textContent   = this.formatSpeed(data.uploadSpeed);
+      
+        // Convert progress from 0..1 to percentage
+        document.getElementById('progress').textContent = (data.progress * 100).toFixed(2) + '%';
+      
+        // Simple buffer health from the video element
+        const video = document.getElementById('videoPlayer');
+        let bufferHealth = 'N/A';
+        if (video && video.buffered && video.buffered.length > 0) {
+          const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+          const secondsBuffered = bufferedEnd - video.currentTime;
+          bufferHealth = secondsBuffered.toFixed(1) + 's';
+        }
+        document.getElementById('bufferHealth').textContent = bufferHealth;
+      
+        // Peers, seeds, and leechers
+        document.getElementById('peers').textContent    = data.peers;
+        document.getElementById('seeds').textContent    = data.seeds;
+        document.getElementById('leechers').textContent = data.leechers;
+      }
+      
 
     // We keep the original example's "formatSpeed" commented out or as needed
     formatSpeed(bytes) {
-        const units = ['B', 'KB', 'MB', 'GB'];
-        let value = bytes;
-        let unitIndex = 0;
-        
-        while (value > 1024 && unitIndex < units.length - 1) {
-            value /= 1024;
-            unitIndex++;
+        // If bytes is not a valid number, default to 0
+        if (!Number.isFinite(bytes)) {
+          bytes = 0;
         }
-        
-        return `${value.toFixed(1)} ${units[unitIndex]}/s`;
-    }
+      
+        const units = ['B/s', 'kB/s', 'MB/s', 'GB/s'];
+        let unitIndex = 0;
+      
+        // Keep dividing until under 1024 or we run out of units
+        while (bytes >= 1024 && unitIndex < units.length - 1) {
+          bytes /= 1024;
+          unitIndex++;
+        }
+      
+        // Use .toFixed(1) to show one decimal place
+        return bytes.toFixed(1) + ' ' + units[unitIndex];
+      }
+      
 
     setupKeyboardControls() {
         document.addEventListener('keydown', (e) => {

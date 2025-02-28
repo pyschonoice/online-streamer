@@ -94,17 +94,30 @@ class TorrentManager {
 
   setupStatusUpdates(torrent, fileId, statusCallback) {
     const interval = setInterval(() => {
+      // Approximate seeds and leechers
+      let seeds = 0;
+      let leechers = 0;
+      if (torrent.wires && torrent.wires.length > 0) {
+        seeds = torrent.wires.filter(wire => !wire.peerChoking).length;
+        leechers = torrent.numPeers - seeds;
+      }
+  
       const status = {
         type: 'status',
-        progress: torrent.progress,
+        progress: torrent.progress,        // 0..1
         peers: torrent.numPeers,
+        seeds: seeds,
+        leechers: leechers,
+        downloadSpeed: torrent.downloadSpeed, // bytes/sec
+        uploadSpeed: torrent.uploadSpeed,     // bytes/sec
       };
       statusCallback(status);
     }, 1000);
-
+  
     this.statusIntervals.set(fileId, interval);
   }
-
+  
+  
   getVideoFile(fileId) {
     const data = this.torrents.get(fileId);
     return data ? data.videoFile : null;
