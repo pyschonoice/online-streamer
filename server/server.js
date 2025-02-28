@@ -7,6 +7,8 @@ import TorrentManager from './torrentManager.js';
 import srt2vtt from 'srt-to-vtt';
 import { PassThrough } from 'stream'; // Native stream passthrough
 
+
+
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -30,10 +32,47 @@ wss.on('connection', (ws) => {
         try {
             const data = JSON.parse(message);
 
-            if (data.type === 'magnetLink') {
+            // =========== NEW: handle torrentFile ===============
+            if (data.type === 'torrentFile') {
+                console.log('Received .torrent file via WS');
+                // 1) Decode from base64 -> Buffer
+                const fileBuffer = Buffer.from(data.fileData, 'base64');
+        
+                // 2) Clean up any previously active torrent
+                if (currentFileId) {
+                  await torrentManager.cleanup(currentFileId);
+                }
+        
+                // 3) Add the raw buffer to the TorrentManager
+                const result = await torrentManager.addTorrentFile(fileBuffer, (status) => {
+                  ws.send(JSON.stringify(status));
+                });
+        
+                if (result.success) {
+                  currentFileId = result.fileId;
+        
+                  // Gather info to send back to client
+                  const torrentData = torrentManager.torrents.get(result.fileId);
+                  const subtitleCount = torrentData?.subtitleFiles?.length || 0;
+        
+                  ws.send(JSON.stringify({
+                    type: 'videoURL',
+                    url: `/stream/${result.fileId}`,
+                    fileName: result.fileName,
+                    fileId: result.fileId,
+                    subtitleCount
+                  }));
+                } else {
+                  ws.send(JSON.stringify({
+                    type: 'error',
+                    message: result.error || 'Error adding torrent buffer'
+                  }));
+                }
+
+            } else if (data.type === 'magnetLink') {
+                // (unchanged existing logic)
                 console.log('Received magnet link:', data.magnetLink);
-                
-                // Ensure previous torrent is cleaned up before adding a new one
+
                 if (currentFileId) {
                     await torrentManager.cleanup(currentFileId);
                 }
@@ -45,17 +84,15 @@ wss.on('connection', (ws) => {
 
                 if (result.success) {
                     currentFileId = result.fileId;
-                
-                    // Get the data from the torrent manager to figure out how many subtitles
-                    const data = torrentManager.torrents.get(result.fileId);
-                    const subtitleCount = data?.subtitleFiles?.length || 0;
-                
+                    const torrentData = torrentManager.torrents.get(result.fileId);
+                    const subtitleCount = torrentData?.subtitleFiles?.length || 0;
+
                     ws.send(JSON.stringify({
                         type: 'videoURL',
                         url: `/stream/${result.fileId}`,
                         fileName: result.fileName,
-                        fileId: result.fileId,            // add the fileId so the client can build subtitle URLs
-                        subtitleCount: subtitleCount      // send how many subtitles we found
+                        fileId: result.fileId,
+                        subtitleCount
                     }));
                 }
             }

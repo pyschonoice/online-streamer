@@ -53,6 +53,45 @@ class TorrentManager {
     });
   }
 
+   // =============== NEW: Add .torrent buffer directly ===============
+   async addTorrentFile(torrentBuffer, statusCallback) {
+    return new Promise((resolve) => {
+      this.client.add(torrentBuffer, (torrent) => {
+        // 1) Pick the largest video file
+        const videoFile = torrent.files.reduce((largest, file) => {
+          const isVideo = /\.(mp4|webm|mkv)$/i.test(file.name);
+          return isVideo && (!largest || file.length > largest.length) ? file : largest;
+        }, null);
+
+        if (!videoFile) {
+          torrent.destroy();
+          return resolve({
+            success: false,
+            error: 'No video file found in torrent'
+          });
+        }
+
+        // 2) Find subtitle files
+        const subtitleFiles = torrent.files.filter(file => /\.(srt|vtt)$/i.test(file.name));
+
+        // 3) Construct an ID from the video file name (or any logic you prefer)
+        const fileId = Buffer.from(videoFile.name).toString('base64');
+
+        // 4) Store references
+        this.torrents.set(fileId, { torrent, videoFile, subtitleFiles });
+
+        // 5) Start status updates
+        this.setupStatusUpdates(torrent, fileId, statusCallback);
+
+        resolve({
+          success: true,
+          fileId,
+          fileName: videoFile.name
+        });
+      });
+    });
+  }
+
   setupStatusUpdates(torrent, fileId, statusCallback) {
     const interval = setInterval(() => {
       const status = {

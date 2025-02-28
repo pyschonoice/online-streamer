@@ -11,10 +11,20 @@
         <h1>WebTorrent Video Streaming</h1>
         
         <div class="input-section">
-            <input type="text" id="magnetLink" placeholder="Enter magnet link...">
+            <input type="text" id="magnetLink" placeholder="Enter magnet link... (Its quicker than torrent.)">
             <button id="streamBtn">Stream Video</button>
         </div>
 
+        <!-- NEW: .torrent file section -->
+        <div class="file-section">
+            <label for="torrentFile">Or upload a .torrent file:</label>
+            <input type="file" id="torrentFile" accept=".torrent">
+        </div>
+
+        <!-- OPTIONAL: If you want a visible drag-and-drop area -->
+        <div id="dragDropArea" class="drag-drop-area">
+            <p>Drag & Drop .torrent file here</p>
+        </div>
         <div id="error" class="error"></div>
 
         <div id="loadingStatus" class="loading-container" style="display: none;">

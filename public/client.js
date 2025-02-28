@@ -76,6 +76,69 @@ class TorrentStreamClient {
             
             this.refreshToggleButton();
         });
+
+
+        // ====== NEW: Handle .torrent file selection ======
+        const fileInput = document.getElementById('torrentFile');
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                this.handleTorrentFile(file);
+            }
+        });
+
+        // ====== NEW: Optional drag-and-drop support ======
+        const dropArea = document.getElementById('dragDropArea');
+        // Prevent default behaviors for drag & drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, (ev) => ev.preventDefault(), false);
+        });
+        // Highlight on dragover
+        dropArea.addEventListener('dragover', () => {
+            dropArea.classList.add('drag-over');
+        });
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.classList.remove('drag-over');
+        });
+        // Handle dropped file
+        dropArea.addEventListener('drop', (ev) => {
+            dropArea.classList.remove('drag-over');
+            const file = ev.dataTransfer.files[0];
+            if (file) {
+                this.handleTorrentFile(file);
+            }
+        });
+    }
+
+     // ====== NEW: read .torrent file as base64 and send to server ======
+     handleTorrentFile(file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const arrayBuffer = reader.result;
+            // Convert arrayBuffer -> Uint8Array -> base64
+            const uint8View = new Uint8Array(arrayBuffer);
+
+            // A quick inline base64:
+            let binary = '';
+            for (let i = 0; i < uint8View.length; i++) {
+                binary += String.fromCharCode(uint8View[i]);
+            }
+            const base64String = btoa(binary);
+
+            // Now send to server over WS
+            this.clearError();
+            this.showLoading(true);
+
+            this.ws.send(JSON.stringify({
+                type: 'torrentFile',
+                fileData: base64String
+            }));
+        };
+        reader.onerror = () => {
+            this.showError('Could not read .torrent file');
+        };
+
+        reader.readAsArrayBuffer(file);
     }
     
     refreshToggleButton() {
