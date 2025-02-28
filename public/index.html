@@ -1,110 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>WebTorrent Video Streaming</title>
     <link rel="stylesheet" href="styles.css">
-</head>
-<body>
+  </head>
+  <body>
+    <!-- Full-screen dark background container -->
     <div class="container">
-        <h1>WebTorrent Video Streaming</h1>
-        
-        <div class="input-section">
-            <input type="text" id="magnetLink" placeholder="Enter magnet link... (Its quicker than torrent.)">
-            <button id="streamBtn">Stream Video</button>
+      <!-- Header with neon green title -->
+      <header class="header">
+        <h1 class="text-neon-green">WebTorrent Video Streaming</h1>
+      </header>
+
+      <!-- Input Section -->
+      <section class="input-section">
+        <input type="text" id="magnetLink" placeholder="Enter magnet link... (It’s quicker than torrent.)">
+        <button id="streamBtn" class="btn-neon">Stream Video</button>
+      </section>
+
+      <!-- Upload Section -->
+      <section class="file-section">
+        <label for="torrentFile">Or upload a .torrent file:</label>
+        <input type="file" id="torrentFile" accept=".torrent">
+      </section>
+
+      <!-- Drag & Drop Area -->
+      <div id="dragDropArea" class="drag-drop-area">
+        <p>Drag & Drop .torrent file here</p>
+      </div>
+
+      <div id="error" class="error"></div>
+
+      <!-- Loading Status -->
+      <div id="loadingStatus" class="loading-container">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading torrent metadata...</div>
+      </div>
+
+      <!-- Video Player Container with overlay controls -->
+      <div class="video-container" id="videoContainer" style="display: none;">
+        <video id="videoPlayer" class="rounded-video" controls>
+          Your browser does not support the video tag.
+        </video>
+        <!-- Overlay for video controls -->
+        <div class="video-overlay-controls">
+          <!-- Top row: Status button (left) and Subtitle dropdown (right) -->
+          <div class="overlay-top-row">
+            <button id="toggleStatsBtn" class="overlay-btn status-btn">Stats</button>
+            <select id="overlaySubSelect" class="overlay-subtitle-selector">
+              <!-- Options will be set dynamically as in client.js -->
+              <option value="off">Subtitles Off</option>
+            </select>
+          </div>
+
         </div>
+      </div>
 
-        <!-- NEW: .torrent file section -->
-        <div class="file-section">
-            <label for="torrentFile">Or upload a .torrent file:</label>
-            <input type="file" id="torrentFile" accept=".torrent">
+      <!-- Torrent Stats Panel (collapsible) -->
+      <section id="torrentStatus" class="status-container">
+        <h2 class="text-neon-green">Torrent Stats</h2>
+        <div class="status-item">
+          <span>Download Speed:</span>
+          <span id="downloadSpeed">0 B/s</span>
         </div>
-
-        <!-- OPTIONAL: If you want a visible drag-and-drop area -->
-        <div id="dragDropArea" class="drag-drop-area">
-            <p>Drag & Drop .torrent file here</p>
+        <div class="status-item">
+          <span>Upload Speed:</span>
+          <span id="uploadSpeed">0 B/s</span>
         </div>
-        <div id="error" class="error"></div>
-
-        <div id="loadingStatus" class="loading-container" style="display: none;">
-            <div class="loading-spinner"></div>
-            <div class="loading-text">Loading torrent metadata...</div>
-        </div>
-
-        
-
-        <!-- Subtitle track selection + toggle button -->
-        <div class="subtitle-controls">
-            <label for="subTrackSelect">Subtitle Track:</label>
-            <select id="subTrackSelect"></select>
-            
-            <!-- Start off in OFF (red) state -->
-            <button id="toggleSubtitlesBtn" class="subtitles-off">
-                Toggle Subtitles (OFF)
-            </button>
-        </div>
-
-        <div class="video-container">
-            <video id="videoPlayer" controls style="display: none;">
-                Your browser does not support the video tag.
-            </video>
-        </div>
-
-        <!-- New toggle button for status updates -->
-        <button id="toggleStatusBtn">Status</button>
-
-        <!-- Updated status container with additional info -->
-        <div id="torrentStatus" class="status-container" style="display: none;">
-            <div class="status-item">
-            <span>Download Speed:</span>
-            <span id="downloadSpeed">0 B/s</span>
-            </div>
-            <div class="status-item">
-            <span>Upload Speed:</span>
-            <span id="uploadSpeed">0 B/s</span>
-            </div>
-            <div class="status-item">
-            <span>Progress:</span>
-            <span id="progress">0%</span>
-            </div>
-            <div class="status-item">
-            <span>Buffer Health:</span>
-            <span id="bufferHealth">N/A</span>
-            </div>
-            <div class="status-item">
+        <div class="status-item">
             <span>Peers:</span>
             <span id="peers">0</span>
-            </div>
-            <!-- <div class="status-item">
-            <span>Leechers:</span>
-            <span id="leechers">0</span>
-            </div> -->
+          </div>
+        <div class="status-item">
+          <span>Progress:</span>
+          <span id="progressText">0%</span>
         </div>
-
-        <!-- <div class="keyboard-controls-hint">
-            Keyboard Controls:
-            <ul>
-                <li>←/→: Seek ±10 seconds</li>
-                <li>↑/↓: Volume control</li>
-                <li>Space: Play/Pause</li>
-                <li>F: Fullscreen</li>
-                <li>M: Mute/Unmute</li>
-            </ul>
-        </div> -->
+        <div class="status-item">
+          <span>Buffer Health:</span>
+          <span id="bufferHealth">N/A</span>
+        </div>
+        
+      </section>
     </div>
 
     <script src="client.js"></script>
-
     <script>
-        window.addEventListener('beforeunload', () => {
-          // If you're maintaining a WebSocket reference in window.torrentWs or similar:
-          if (window.torrentWs && window.torrentWs.readyState === WebSocket.OPEN) {
-            console.log('Notifying server to cleanup before closing...');
-            // Send a message or close the websocket explicitly
-            window.torrentWs.close();
-          }
-        });
+      window.addEventListener('beforeunload', () => {
+        if (window.torrentWs && window.torrentWs.readyState === WebSocket.OPEN) {
+          console.log('Notifying server to cleanup before closing...');
+          window.torrentWs.close();
+        }
+      });
     </script>
-</body>
+  </body>
 </html>

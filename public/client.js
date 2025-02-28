@@ -7,7 +7,7 @@ class TorrentStreamClient {
         this.setupKeyboardControls();
         this.seekStep = 10;
         this.isConnected = false;
-
+        this.showStats = false;
         // Keep an array of track <track> elements so we can manage them:
         this.subtitleTracks = [];
     }
@@ -45,38 +45,7 @@ class TorrentStreamClient {
         const streamBtn = document.getElementById('streamBtn');
         streamBtn.addEventListener('click', () => this.handleStreamClick());
     
-        // 1) Subtitle track dropdown
-        const subSelect = document.getElementById('subTrackSelect');
-        subSelect.addEventListener('change', () => {
-            // If user picks a different track from the dropdown,
-            // disable all except the selected one
-            const selectedIndex = parseInt(subSelect.value, 10);
-            
-            // IMPORTANT: use `trackEl.track.mode` to show/hide
-            this.subtitleTracks.forEach((trackEl, i) => {
-                trackEl.track.mode = (i === selectedIndex) ? 'showing' : 'disabled';
-            });
-
-            this.refreshToggleButton();
-        });
-    
-        // 2) Toggle Subtitles button
-        const toggleSubBtn = document.getElementById('toggleSubtitlesBtn');
-        toggleSubBtn.addEventListener('click', () => {
-            const selectedIndex = parseInt(subSelect.value, 10);
-            const trackEl = this.subtitleTracks[selectedIndex];
-            if (!trackEl) return;
-            
-            // Use trackEl.track.mode to toggle subtitles
-            if (trackEl.track.mode === 'showing') {
-                trackEl.track.mode = 'disabled';
-            } else {
-                trackEl.track.mode = 'showing';
-            }
-            
-            this.refreshToggleButton();
-        });
-
+       
 
         // ====== NEW: Handle .torrent file selection ======
         const fileInput = document.getElementById('torrentFile');
@@ -109,17 +78,34 @@ class TorrentStreamClient {
             }
         });
 
-        const toggleStatusBtn = document.getElementById('toggleStatusBtn');
-        toggleStatusBtn.addEventListener('click', () => {
-        const statusContainer = document.getElementById('torrentStatus');
-        // Toggle display between block and none
-        if (statusContainer.style.display === 'none' || statusContainer.style.display === '') {
-            statusContainer.style.display = 'block';
-        } else {
-            statusContainer.style.display = 'none';
-        }
+        const video = document.getElementById('videoPlayer');
+       
+        
+       
+        // Stats toggle button in overlay (top-left)
+        const statsBtn = document.getElementById('toggleStatsBtn');
+        statsBtn.addEventListener('click', () => {
+            this.showStats = !this.showStats;
+            const statsPanel = document.getElementById('torrentStatus');
+            statsPanel.style.display = this.showStats ? 'block' : 'none';
+            statsBtn.textContent = this.showStats ? 'Hide Stats' : 'Status';
         });
+
+  
+        
+        // Subtitle selector (both overlay and separate if needed)
+        const overlaySubSelect = document.getElementById('overlaySubSelect');
+        overlaySubSelect.addEventListener('change', () => {
+          const selectedIndex = parseInt(overlaySubSelect.value, 10);
+          this.subtitleTracks.forEach((trackEl, i) => {
+            trackEl.track.mode = (i === selectedIndex) ? 'showing' : 'disabled';
+          });
+          this.refreshToggleButton();
+        });
+
+        
     }
+    
 
      // ====== NEW: read .torrent file as base64 and send to server ======
      handleTorrentFile(file) {
@@ -153,22 +139,26 @@ class TorrentStreamClient {
     }
     
     refreshToggleButton() {
-        const toggleSubBtn = document.getElementById('toggleSubtitlesBtn');
-        const subSelect = document.getElementById('subTrackSelect');
-        const selectedIndex = parseInt(subSelect.value, 10);
+        // Assuming you might have a dedicated toggle button elsewhere,
+        // update its appearance based on the currently selected subtitle track.
+        // Here, we reference the overlay dropdown.
+        const overlaySubSelect = document.getElementById('overlaySubSelect');
+        const selectedIndex = parseInt(overlaySubSelect.value, 10);
         const trackEl = this.subtitleTracks[selectedIndex];
-
-        // Again, check trackEl.track.mode
-        if (trackEl && trackEl.track && trackEl.track.mode === 'showing') {
+    
+        // For example, if you have a button (id="toggleSubtitlesBtn") to reflect the state:
+        const toggleSubBtn = document.getElementById('toggleSubtitlesBtn');
+        if (toggleSubBtn && trackEl && trackEl.track && trackEl.track.mode === 'showing') {
             toggleSubBtn.classList.remove('subtitles-off');
             toggleSubBtn.classList.add('subtitles-on');
-            toggleSubBtn.textContent = 'Toggle Subtitles (ON)';
-        } else {
+            toggleSubBtn.textContent = 'Subtitles ON';
+        } else if (toggleSubBtn) {
             toggleSubBtn.classList.remove('subtitles-on');
             toggleSubBtn.classList.add('subtitles-off');
-            toggleSubBtn.textContent = 'Toggle Subtitles (OFF)';
+            toggleSubBtn.textContent = 'Subtitles OFF';
         }
     }
+    
 
     handleStreamClick() {
         const magnetLink = document.getElementById('magnetLink').value.trim();
@@ -197,63 +187,57 @@ class TorrentStreamClient {
 
     handleVideoURL(data) {
         this.showLoading(false);
+        
+        const videoContainer = document.getElementById('videoContainer');
+        videoContainer.style.display = 'block';
         const videoPlayer = document.getElementById('videoPlayer');
         videoPlayer.style.display = 'block';
         videoPlayer.src = data.url;
-
-         // ===== NEW: Make the subtitle controls visible =====
-        //Only show subtitle controls if we have at least one subtitle
-        const subtitleControls = document.querySelector('.subtitle-controls');
-        if (data.subtitleCount && data.subtitleCount > 0) {
-            subtitleControls.style.display = 'flex';
-        } 
-
+    
         // Remove any existing <track> elements from previous load
         const oldTracks = videoPlayer.querySelectorAll('track');
         oldTracks.forEach(t => t.remove());
-
+    
         // Clear our track references
         this.subtitleTracks = [];
-
-        // 2) Build new <track> elements if we have subtitleCount
-        const subSelect = document.getElementById('subTrackSelect');
-        subSelect.innerHTML = '';  // Clear old <option>s
-
+    
+        // Update the overlay subtitle dropdown
+        const overlaySubSelect = document.getElementById('overlaySubSelect');
+        overlaySubSelect.innerHTML = '';  // Clear previous options
+    
         for (let i = 0; i < data.subtitleCount; i++) {
             // Create the <track> element
             const track = document.createElement('track');
-
+    
             // Use subtitle file name if available; otherwise fallback to a generic label.
             const subtitleLabel = (data.subtitleNames && data.subtitleNames[i])
-            ? data.subtitleNames[i]
-            : `Subtitle #${i + 1}`;
-
+                ? data.subtitleNames[i]
+                : `Subtitle #${i + 1}`;
+    
             track.kind = 'subtitles';
             track.label = subtitleLabel;
             track.srclang = 'en'; 
             track.src = `/subtitles/${data.fileId}/${i}`;
             track.default = (i === 0); // Make the first track default "on"
-
+    
             videoPlayer.appendChild(track);
-
-            // Keep a reference so we can toggle them later
             this.subtitleTracks.push(track);
-
-            // Also add <option> to the <select> so user can pick
+    
+            // Also add <option> to the overlay dropdown
             const option = document.createElement('option');
             option.value = i.toString();
             option.textContent = subtitleLabel;
-            subSelect.appendChild(option);
+            overlaySubSelect.appendChild(option);
         }
-
+    
         // If at least one track is found, select index=0 by default
         if (data.subtitleCount > 0) {
-            subSelect.value = '0';
+            overlaySubSelect.value = '0';
         }
-
-        // Ensure the button color is correct
+    
+        // Refresh the subtitle toggle button appearance if needed
         this.refreshToggleButton();
-
+    
         videoPlayer.onerror = (e) => {
             console.error('Video error:', e);
             this.showError('Error playing video. Please try again.');
@@ -264,7 +248,7 @@ class TorrentStreamClient {
             console.error('Autoplay failed:', e);
         });
     }
-
+    
     showError(message) {
         this.showLoading(false);
         const errorElement = document.getElementById('error');
@@ -277,29 +261,35 @@ class TorrentStreamClient {
     }
 
     updateStatus(data) {
-        // Download/Upload speeds in bytes/sec
         document.getElementById('downloadSpeed').textContent = this.formatSpeed(data.downloadSpeed);
-        document.getElementById('uploadSpeed').textContent   = this.formatSpeed(data.uploadSpeed);
-      
-        // Convert progress from 0..1 to percentage
-        document.getElementById('progress').textContent = (data.progress * 100).toFixed(2) + '%';
-      
-        // Simple buffer health from the video element
+        document.getElementById('uploadSpeed').textContent = this.formatSpeed(data.uploadSpeed);
+        // Use "progressText" to match the HTML
+        document.getElementById('progressText').textContent = (data.progress * 100).toFixed(2) + '%';
+        
+        // Update buffer health
         const video = document.getElementById('videoPlayer');
         let bufferHealth = 'N/A';
         if (video && video.buffered && video.buffered.length > 0) {
-          const bufferedEnd = video.buffered.end(video.buffered.length - 1);
-          const secondsBuffered = bufferedEnd - video.currentTime;
-          bufferHealth = secondsBuffered.toFixed(1) + 's';
+            const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+            const secondsBuffered = bufferedEnd - video.currentTime;
+            bufferHealth = secondsBuffered.toFixed(1) + 's';
         }
         document.getElementById('bufferHealth').textContent = bufferHealth;
-      
-        // Peers, seeds, and leechers
-        document.getElementById('peers').textContent    = data.peers;
-        document.getElementById('seeds').textContent    = data.seeds;
-        document.getElementById('leechers').textContent = data.leechers;
-      }
-      
+        
+        // Update peers
+        document.getElementById('peers').textContent = data.peers;
+        
+        // Only update seeds and leechers if the corresponding elements exist
+        const seedsElem = document.getElementById('seeds');
+        if (seedsElem) {
+            seedsElem.textContent = data.seeds;
+        }
+        const leechersElem = document.getElementById('leechers');
+        if (leechersElem) {
+            leechersElem.textContent = data.leechers;
+        }
+    }
+    
 
     // We keep the original example's "formatSpeed" commented out or as needed
     formatSpeed(bytes) {

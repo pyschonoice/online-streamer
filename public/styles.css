@@ -1,169 +1,230 @@
-.container {
-    max-width: 800px;
+/*------------------------------------------------------------
+  Dark Theme & Neon Green Variables
+-------------------------------------------------------------*/
+:root {
+    --background: 2 4% 9%;
+    --foreground: 0 0% 100%;
+    --primary: 142 100% 50%;
+    --primary-foreground: 0 0% 0%;
+    --neon-green: rgb(173, 13, 168);
+    --radius: 0.5rem;
+  }
+  
+  /* Neon green text effect */
+  .text-neon-green {
+    color: var(--neon-green);
+    text-shadow: 0 0 5px rgba(255, 0, 217, 0.5);
+  }
+  
+  /*------------------------------------------------------------
+    Global Base Styles
+  -------------------------------------------------------------*/
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+    line-height: 1.6;
+  }
+  
+  /*------------------------------------------------------------
+    Container & Layout
+  -------------------------------------------------------------*/
+  .container {
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 20px;
-}
-
-.input-section {
-    margin: 20px 0;
-    display: flex;
-    gap: 10px;
-}
-
-#magnetLink {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
-#streamBtn {
-    padding: 10px 20px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-#streamBtn:hover {
-    background-color: #0056b3;
-}
-
-.error {
-    color: red;
-    margin: 10px 0;
-}
-
-.video-container {
-    margin-top: 20px;
-}
-
-/* The video will take full width if possible, up to 800px */
-#videoPlayer {
-    width: 100%;
-    max-width: 800px;
-}
-
-.status-container {
-    background: #f5f5f5;
-    border-radius: 4px;
-    padding: 15px;
-    margin: 20px 0;
-    font-size: 14px;
-}
-
-.status-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin: 8px 0;
-    padding: 4px 0;
-    border-bottom: 1px solid #eee;
-}
-
-.status-item:last-child {
-    border-bottom: none;
-}
-
-.keyboard-controls-hint {
-    margin-top: 15px;
-    padding: 10px;
-    background: #f8f9fa;
-    border-radius: 4px;
-    font-size: 14px;
-    color: #666;
-}
-
-.keyboard-controls-hint ul {
-    margin: 5px 0;
-    padding-left: 20px;
-    list-style-type: none;
-}
-
-.keyboard-controls-hint li {
-    margin: 3px 0;
-}
-
-.loading-container {
+    padding: 2rem;
+  }
+  
+  /* Header */
+  .header {
     text-align: center;
-    margin: 20px 0;
-    padding: 20px;
-    background: #f5f5f5;
-    border-radius: 4px;
-}
-
-.loading-spinner {
+    margin-bottom: 1.5rem;
+  }
+  .header h1 {
+    font-size: 2.5rem;
+  }
+  
+  /*------------------------------------------------------------
+    Input & Upload Sections
+  -------------------------------------------------------------*/
+  .input-section,
+  .file-section {
+    margin-bottom: 1.5rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+  #magnetLink {
+    flex: 1;
+    padding: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: var(--radius);
+    background: #222;
+    color: #fff;
+  }
+  #magnetLink:focus {
+    outline: none;
+    border-color: var(--neon-green);
+  }
+  .btn-neon {
+    background-color: var(--neon-green);
+    color: var(--primary-foreground);
+    border: none;
+    border-radius: var(--radius);
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+  }
+  .btn-neon:hover {
+    transform: scale(1.03);
+  }
+  
+  /* Drag & Drop Area */
+  .drag-drop-area {
+    border: 2px dashed rgba(255,255,255,0.3);
+    padding: 1rem;
+    text-align: center;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: transform 0.3s ease, background-color 0.3s ease;
+    margin-bottom: 1.5rem;
+  }
+  .drag-drop-area:hover {
+    background-color: rgba(255, 0, 234, 0.1);
+    transform: scale(1.02);
+  }
+  
+  /* Error & Loading */
+  .error {
+    color: red;
+    margin-bottom: 1rem;
+  }
+  .loading-container {
+    display: none;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #111;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: var(--radius);
+  }
+  .loading-spinner {
     display: inline-block;
     width: 30px;
     height: 30px;
-    border: 3px solid #f3f3f3;
-    border-top: 3px solid #007bff;
+    border: 3px solid rgba(255,255,255,0.2);
+    border-top: 3px solid var(--neon-green);
     border-radius: 50%;
     animation: spin 1s linear infinite;
-    margin-right: 10px;
-}
-
-.loading-text {
+    margin-right: 0.5rem;
+  }
+  .loading-text {
     display: inline-block;
     vertical-align: middle;
-    color: #666;
-}
-
-@keyframes spin {
+    color: #fff;
+  }
+  @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
-}
-
-/* Position subtitles near the bottom-right corner (HTML5/WebVTT) */
-video::cue {
-    text-align: right;
-    background-color: rgba(0, 0, 0, 0.5);
-    color: #fff;
-    font-size: 1em;
-}
-
-/* For Chrome/Edge/Safari specifically */
-video::-webkit-media-text-track-region {
-    left: auto !important;
-    right: 5% !important;
-    bottom: 5% !important;
-    width: 30% !important;
-    text-align: right !important;
-}
-
-/* Hide the subtitle controls by default */
-.subtitle-controls {
-    display: none;
-    margin-top: 10px; /* optional styling */
-    gap: 10px;        /* optional styling if you use flex */
   }
   
-
-/* Keep the video + subtitles in one block, only visible when #videoPlayer is displayed */
-.video-container {
+  /*------------------------------------------------------------
+    Video Player Container & Overlay Controls
+  -------------------------------------------------------------*/
+  .video-container {
     position: relative;
-    display: inline-block;
-}
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+  
+  /* Video element styling */
+  .rounded-video {
+    width: 100%;
+    display: block;
+  }
+  
+  /* Overlay for video controls */
+  .video-overlay-controls {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none; /* Allow clicks to pass to video unless on controls */
+  }
 
-/* Toggle button colors for subtitles */
-#toggleSubtitlesBtn.subtitles-on {
-    background-color: green;
-    color: #fff;
-}
 
-#toggleSubtitlesBtn.subtitles-off {
-    background-color: red;
+  
+  /* Top row: Status button and Subtitle dropdown */
+  .overlay-top-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    pointer-events: auto;
+  }
+  .overlay-top-row .overlay-btn,
+  .overlay-top-row select {
+    background: rgba(0,0,0,0.6);
+    border: none;
     color: #fff;
-}
-.drag-drop-area {
-    border: 2px dashed #ccc;
-    padding: 20px;
-    text-align: center;
-    margin-top: 10px;
+    padding: 0.5rem;
+    border-radius: var(--radius);
     cursor: pointer;
-}
-.drag-drop-area.drag-over {
-    border-color: #007bff;
-    background-color: #f0f8ff;
-}
+    transition: transform 0.3s ease;
+  }
+  .overlay-top-row .overlay-btn:hover,
+  .overlay-top-row select:hover {
+    transform: scale(1.1);
+  }
+
+    /* Overlay for video controls is hidden by default */
+.overlay-top-row {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none; /* So that clicks pass through when hidden */
+  }
+  
+  /* When the mouse is over the video container, show the overlay */
+  .video-container:hover .overlay-top-row {
+    opacity: 1;
+    pointer-events: auto; /* Enable interactions when visible */
+  }
+  
+ 
+  
+  
+  /*------------------------------------------------------------
+    Torrent Stats Panel
+  -------------------------------------------------------------*/
+  .status-container {
+    display: none;
+    background: #111;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: var(--radius);
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+  }
+
+  
+  .status-container h2 {
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+  }
+  .status-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+  }
+  .status-item:last-child {
+    margin-bottom: 0;
+  }
+  
