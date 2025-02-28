@@ -191,8 +191,11 @@ class TorrentStreamClient {
         videoPlayer.src = data.url;
 
          // ===== NEW: Make the subtitle controls visible =====
+        //Only show subtitle controls if we have at least one subtitle
         const subtitleControls = document.querySelector('.subtitle-controls');
-        subtitleControls.style.display = 'flex'; 
+        if (data.subtitleCount && data.subtitleCount > 0) {
+            subtitleControls.style.display = 'flex';
+        } 
 
         // Remove any existing <track> elements from previous load
         const oldTracks = videoPlayer.querySelectorAll('track');
@@ -208,8 +211,14 @@ class TorrentStreamClient {
         for (let i = 0; i < data.subtitleCount; i++) {
             // Create the <track> element
             const track = document.createElement('track');
+
+            // Use subtitle file name if available; otherwise fallback to a generic label.
+            const subtitleLabel = (data.subtitleNames && data.subtitleNames[i])
+            ? data.subtitleNames[i]
+            : `Subtitle #${i + 1}`;
+
             track.kind = 'subtitles';
-            track.label = `Subtitle #${i+1}`;
+            track.label = subtitleLabel;
             track.srclang = 'en'; 
             track.src = `/subtitles/${data.fileId}/${i}`;
             track.default = (i === 0); // Make the first track default "on"
@@ -222,7 +231,7 @@ class TorrentStreamClient {
             // Also add <option> to the <select> so user can pick
             const option = document.createElement('option');
             option.value = i.toString();
-            option.textContent = `Subtitle #${i+1}`;
+            option.textContent = subtitleLabel;
             subSelect.appendChild(option);
         }
 

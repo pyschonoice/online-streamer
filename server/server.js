@@ -49,19 +49,24 @@ wss.on('connection', (ws) => {
                 });
         
                 if (result.success) {
-                  currentFileId = result.fileId;
-        
-                  // Gather info to send back to client
-                  const torrentData = torrentManager.torrents.get(result.fileId);
-                  const subtitleCount = torrentData?.subtitleFiles?.length || 0;
-        
-                  ws.send(JSON.stringify({
-                    type: 'videoURL',
-                    url: `/stream/${result.fileId}`,
-                    fileName: result.fileName,
-                    fileId: result.fileId,
-                    subtitleCount
-                  }));
+                    currentFileId = result.fileId;
+                    // After adding the torrent and retrieving torrentData:
+                    const torrentData = torrentManager.torrents.get(result.fileId);
+                    const subtitleFiles = torrentData?.subtitleFiles || [];
+                    const subtitleCount = subtitleFiles.length;
+                    // Build an array of subtitle file names
+                    const subtitleNames = subtitleFiles.map(file => file.name);
+
+                    ws.send(JSON.stringify({
+                        type: 'videoURL',
+                        url: `/stream/${result.fileId}`,
+                        fileName: result.fileName,
+                        fileId: result.fileId,
+                        subtitleCount,
+                        subtitleNames  // <-- include the names in the response
+                    }));
+
+                    
                 } else {
                   ws.send(JSON.stringify({
                     type: 'error',
@@ -84,15 +89,20 @@ wss.on('connection', (ws) => {
 
                 if (result.success) {
                     currentFileId = result.fileId;
+                    // After adding the torrent and retrieving torrentData:
                     const torrentData = torrentManager.torrents.get(result.fileId);
-                    const subtitleCount = torrentData?.subtitleFiles?.length || 0;
+                    const subtitleFiles = torrentData?.subtitleFiles || [];
+                    const subtitleCount = subtitleFiles.length;
+                    // Build an array of subtitle file names
+                    const subtitleNames = subtitleFiles.map(file => file.name);
 
                     ws.send(JSON.stringify({
                         type: 'videoURL',
                         url: `/stream/${result.fileId}`,
                         fileName: result.fileName,
                         fileId: result.fileId,
-                        subtitleCount
+                        subtitleCount,
+                        subtitleNames  // <-- include the names in the response
                     }));
                 }
             }
